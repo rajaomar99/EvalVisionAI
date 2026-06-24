@@ -1,0 +1,16 @@
+node_modules/
+dist/
+build/
+.env
+.venv/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.log
+.DS_Store
+
+# Uploaded files (Ignore contents but keep directory structure)
+server/uploads/**/*
+!server/uploads/**/
+!server/uploads/**/.gitkeep
