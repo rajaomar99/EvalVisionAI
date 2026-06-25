@@ -17,6 +17,9 @@ import { Request, Response, NextFunction } from "express";
 
 const app = express();
 
+// Trust the proxy (e.g. Render, Heroku) so secure cookies can be set
+app.set("trust proxy", 1);
+
 // Core Middleware
 app.use(helmet());
 app.use(cors({ origin: env.CLIENT_ORIGIN, credentials: true }));
