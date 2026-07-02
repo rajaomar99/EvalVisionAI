@@ -1,37 +1,15 @@
 import { Request, Response } from "express";
 import User from "../models/User.js";
 import { handleError } from "../utils/handleError.js";
-import { ValidationError, ConflictError } from "../utils/errors.js";
-
-// Validators
-
-const isValidEmail = (email: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
-
-const isValidPassword = (password: string) => {
-  const minLength = password.length >= 8;
-  const hasUpper  = /[A-Z]/.test(password);
-  const hasSymbol = /[!@#$%^&*(),.?":{}|<>]/.test(password);
-  return minLength && hasUpper && hasSymbol;
-};
+import { ConflictError } from "../utils/errors.js";
+import { registerDto } from "../schemas/auth.schema.js";
 
 // Controllers
 
 // register
 export const register = async (req: Request, res: Response) => {
   try {
-    const { name, email, password } = req.body as Record<string, any>;
-
-    if (!name || !email || !password) {
-      throw new ValidationError("Please fill in all fields.");
-    }
-    if (!isValidEmail(email)) {
-      throw new ValidationError("Please enter a valid email address.");
-    }
-    if (!isValidPassword(password)) {
-      throw new ValidationError(
-        "Password must be at least 8 characters long, and include at least one uppercase letter and one symbol."
-      );
-    }
+    const { name, email, password }: registerDto = req.body;
 
     const existing = await User.findOne({ email });
     if (existing) throw new ConflictError("Email already registered");

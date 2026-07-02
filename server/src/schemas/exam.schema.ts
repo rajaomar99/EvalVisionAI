@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-// Question sub-schema
+// Single Question
 export const QuestionSchema = z.object({
   questionText: z.string().min(1, "Question text is required"),
   maxMarks:     z.number({ error: "Max marks must be a number" })
@@ -9,35 +9,29 @@ export const QuestionSchema = z.object({
   type:         z.enum(["subjective", "mcq"]).default("subjective"),
 });
 
-export type QuestionInput = z.infer<typeof QuestionSchema>;
-
-// Create
+// Create Exam
 export const CreateExamSchema = z.object({
   title:         z.string().min(1, "Title is required").trim(),
   subject:       z.string().trim().optional().default(""),
   questions:     z.array(QuestionSchema).min(1, "At least one question is required"),
   rubricFileUrl: z.url("rubricFileUrl must be a valid URL"),
-  rubricFileKey: z.string().optional().default(""),
+  rubricFileKey: z.string().min(1, "rubricFileKey is required"),
 });
 
-export type CreateExamInput = z.infer<typeof CreateExamSchema>;
-
-// Update (all fields optional except id, handled via params)
+// Update Exam (all fields optional except id, handled via params)
 export const UpdateExamSchema = z.object({
-  title:         z.string().min(1).trim().optional(),
+  title:         z.string().min(1, "Title is required").trim().optional(),
   subject:       z.string().trim().optional(),
   questions:     z.array(QuestionSchema).min(1).optional(),
-  rubricFileUrl: z.string().url("rubricFileUrl must be a valid URL").optional(),
+  rubricFileUrl: z.url("rubricFileUrl must be a valid URL").optional(),
   rubricFileKey: z.string().optional(),
 });
 
-export type UpdateExamInput = z.infer<typeof UpdateExamSchema>;
-
-// MongoDB ObjectId params
 const mongoId = z.string().regex(/^[a-f\d]{24}$/i, "Invalid ID format");
-
 export const ExamIdParamSchema = z.object({
-  id: mongoId,
+  examId: mongoId,
 });
 
-export type ExamIdParam = z.infer<typeof ExamIdParamSchema>;
+export type createExamDto = z.infer<typeof CreateExamSchema>;
+export type updateExamDto = z.infer<typeof UpdateExamSchema>;
+export type examIdParamDto = z.infer<typeof ExamIdParamSchema>;

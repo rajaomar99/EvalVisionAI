@@ -18,12 +18,17 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    listExams()
-      .then(({ count, pendingCount, exams }) => {
+    async function fetchStats() {
+      try {
+        const { count, pendingCount, exams } = await listExams();
         setStats({ totalExams: count, pendingCount: pendingCount || 0, recentExams: exams.slice(0, 5) });
-      })
-      .catch(() => {})
-      .finally(() => setLoading(false));
+      } catch {
+        // silently ignore
+      } finally {
+        setLoading(false);
+      }
+    }
+    fetchStats();
   }, []);
 
   if (loading) return <LoadingSpinner className="py-20" />;

@@ -4,7 +4,9 @@ import Submission from "../models/Submission.js";
 import Evaluation from "../models/Evaluation.js";
 import { utapi } from "../utils/uploadthingApi.js";
 import { handleError } from "../utils/handleError.js";
-import { ValidationError, ForbiddenError, NotFoundError } from "../utils/errors.js";
+import { ForbiddenError, NotFoundError } from "../utils/errors.js";
+import { confirmSubmissionDto, submissionIdParamDto } from "../schemas/submission.schema.js";
+import { examIdParamDto } from "../schemas/exam.schema.js";
 
 // Similarity helper (Dice coefficient on word sets)
 function similarity(text1: string, text2: string): number {
@@ -26,15 +28,9 @@ function similarity(text1: string, text2: string): number {
 export const uploadSubmission = async (req: Request, res: Response) => {
   try {
     if (!req.user) throw new ForbiddenError("Not authenticated");
-    const { examId } = req.params;
-    const { studentName, fileUrl, utKey, originalFileName, mimeType } = req.body as Record<string, any>;
 
-    if (!studentName) {
-      throw new ValidationError("studentName is required");
-    }
-    if (!fileUrl) {
-      throw new ValidationError("fileUrl is required - upload the file via UploadThing first");
-    }
+    const { examId } = req.params as examIdParamDto;
+    const { studentName, fileUrl, utKey, originalFileName, mimeType }: confirmSubmissionDto = req.body;
 
     const exam = await Exam.findById(examId);
     if (!exam) throw new NotFoundError("Exam");
@@ -50,15 +46,15 @@ export const uploadSubmission = async (req: Request, res: Response) => {
     }
 
     const submission = await Submission.create({
-      studentName,
-      examId:          exam._id,
-      teacherId:       req.user.id,
-      fileUrl:         fileUrl,
-      utKey:           utKey || "",
+      studentName:      studentName,
+      examId:           exam._id,
+      teacherId:        req.user.id,
+      fileUrl:          fileUrl,
+      utKey:            utKey,
       originalFileName: originalFileName || "",
-      mimeType:        mimeType || "",
-      uploadDate:      new Date(),
-      status:          "pending",
+      mimeType:         mimeType || "",
+      uploadDate:       new Date(),
+      status:           "pending",
     });
 
     return res.status(201).json({
@@ -74,7 +70,9 @@ export const uploadSubmission = async (req: Request, res: Response) => {
 export const listSubmissionsByExam = async (req: Request, res: Response) => {
   try {
     if (!req.user) throw new ForbiddenError("Not authenticated");
-    const exam = await Exam.findById(req.params.examId);
+
+    const { examId } = req.params as examIdParamDto;
+    const exam = await Exam.findById(examId);
     if (!exam) throw new NotFoundError("Exam");
 
     if (exam.teacherId.toString() !== req.user.id) {
@@ -91,7 +89,9 @@ export const listSubmissionsByExam = async (req: Request, res: Response) => {
 export const getSubmission = async (req: Request, res: Response) => {
   try {
     if (!req.user) throw new ForbiddenError("Not authenticated");
-    const submission = await Submission.findById(req.params.id);
+
+    const { submissionId } = req.params as submissionIdParamDto;
+    const submission = await Submission.findById(submissionId);
     if (!submission) throw new NotFoundError("Submission");
 
     if (submission.teacherId.toString() !== req.user.id) {
@@ -107,7 +107,9 @@ export const getSubmission = async (req: Request, res: Response) => {
 export const checkPlagiarism = async (req: Request, res: Response) => {
   try {
     if (!req.user) throw new ForbiddenError("Not authenticated");
-    const exam = await Exam.findById(req.params.examId);
+
+    const { examId } = req.params as examIdParamDto;
+    const exam = await Exam.findById(examId);
     if (!exam) throw new NotFoundError("Exam");
 
     if (exam.teacherId.toString() !== req.user.id) {
@@ -177,7 +179,9 @@ export const checkPlagiarism = async (req: Request, res: Response) => {
 export const deleteSubmission = async (req: Request, res: Response) => {
   try {
     if (!req.user) throw new ForbiddenError("Not authenticated");
-    const submission = await Submission.findById(req.params.id);
+
+    const { submissionId } = req.params as submissionIdParamDto;
+    const submission = await Submission.findById(submissionId);
     if (!submission) throw new NotFoundError("Submission");
 
     if (submission.teacherId.toString() !== req.user.id) {

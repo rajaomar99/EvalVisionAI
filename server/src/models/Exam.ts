@@ -1,4 +1,4 @@
-import mongoose, { Schema, HydratedDocument } from "mongoose";
+import mongoose, { Schema } from "mongoose";
 
 // Interfaces
 export interface IQuestion {
@@ -13,13 +13,11 @@ export interface IExam {
   teacherId:     mongoose.Types.ObjectId;
   totalMarks:    number;
   questions:     IQuestion[];
-  rubricFile:    string;
+  rubricFileUrl:    string;
   rubricFileKey: string;
   createdAt:     Date;
   updatedAt:     Date;
 }
-
-export type ExamDocument = HydratedDocument<IExam>;
 
 // Schema
 const questionSchema = new Schema<IQuestion>(
@@ -48,8 +46,8 @@ const examSchema = new Schema<IExam>(
         message: "At least one question is required",
       },
     },
-    rubricFile:    { type: String, default: "" },
-    rubricFileKey: { type: String, default: "" },
+    rubricFileUrl: { type: String, required: [true, "Rubric File URL is required"] },
+    rubricFileKey: { type: String, required: [true, "Rubric File Key is required"] },
   },
   { timestamps: true }
 );

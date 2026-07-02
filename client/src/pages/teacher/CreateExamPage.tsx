@@ -5,13 +5,7 @@ import { useUploadThing } from "../../lib/uploadthing";
 import LoadingSpinner from "../../components/common/LoadingSpinner";
 import type { QuestionInput } from "../../types/index";
 
-type QuestionType = "subjective" | "mcq";
-
-interface QuestionDraft extends QuestionInput {
-  type: QuestionType;
-}
-
-const emptyQuestion = (): QuestionDraft => ({
+const emptyQuestion = (): QuestionInput => ({
   questionText: "",
   maxMarks:     1,
   type:         "subjective",
@@ -29,7 +23,7 @@ export default function CreateExamPage() {
   const [rubricFileKey, setRubricFileKey] = useState(""); // Key returned by UploadThing
   const [uploadingRubric, setUploadingRubric] = useState(false);
   const [rubricUploadError, setRubricUploadError] = useState("");
-  const [questions, setQuestions] = useState<QuestionDraft[]>([emptyQuestion()]);
+  const [questions, setQuestions] = useState<QuestionInput[]>([emptyQuestion()]);
   const [loading, setLoading] = useState(false);
   const [fetching, setFetching] = useState(isEdit);
   const [error, setError] = useState("");
@@ -53,29 +47,32 @@ export default function CreateExamPage() {
   // Pre-fill when editing
   useEffect(() => {
     if (!isEdit || !examId) return;
-    getExam(examId)
-      .then(({ exam }) => {
+    async function fetchExam() {
+      try {
+        const { exam } = await getExam(examId!);
         setTitle(exam.title);
         setSubject(exam.subject ?? "");
         setQuestions(
           exam.questions.map((q) => ({
             questionText: q.questionText,
             maxMarks:     q.maxMarks,
-            type:         (q.type ?? "subjective") as QuestionType,
+            type:         (q.type ?? "subjective") as "subjective" | "mcq",
           }))
         );
-        if (exam.rubricFile)    setRubricFileUrl(exam.rubricFile);
+        if (exam.rubricFileUrl) setRubricFileUrl(exam.rubricFileUrl);
         if (exam.rubricFileKey) setRubricFileKey(exam.rubricFileKey);
-      })
-      .catch((err: unknown) => {
+      } catch (err: unknown) {
         const e = err as { response?: { data?: { message?: string } } };
         setError(e.response?.data?.message ?? "Failed to load exam");
-      })
-      .finally(() => setFetching(false));
+      } finally {
+        setFetching(false);
+      }
+    }
+    fetchExam();
   }, [examId, isEdit]);
 
   // Question helpers
-  function updateQuestion(index: number, field: keyof QuestionDraft, value: string | number) {
+  function updateQuestion(index: number, field: keyof QuestionInput, value: string | number) {
     setQuestions((prev) =>
       prev.map((q, i) => (i === index ? { ...q, [field]: value } : q))
     );
@@ -102,7 +99,7 @@ export default function CreateExamPage() {
   }
 
   // Submit
-  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+  async function handleSubmit(e: React.SubmitEvent<HTMLFormElement>) {
     e.preventDefault();
     try {
       setError("");

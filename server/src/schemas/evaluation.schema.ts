@@ -1,36 +1,21 @@
 import { z } from "zod";
 
-const mongoId = z.string().regex(/^[a-f\d]{24}$/i, "Invalid ID format");
-
-// Criterion score sub-schema
+// Single Criterion score
 export const CriterionScoreSchema = z.object({
   criterionId: z.string().min(1, "criterionId is required"),
   score:       z.number({ error: "Score must be a number" }).min(0, "Score cannot be negative"),
   feedback:    z.string().optional().default(""),
 });
 
-export type CriterionScoreInput = z.infer<typeof CriterionScoreSchema>;
-
-// Update evaluation body
+// Update evaluation body (teacher review)
 export const UpdateEvaluationSchema = z.object({
   criteriaScores:  z.array(CriterionScoreSchema).optional(),
   overallFeedback: z.string().optional(),
-  totalScore:      z.number().min(0).optional(),
-}).refine(
+  totalScore:      z.number().min(0, "Total score cannot be negative").optional(),
+})
+.refine(
   (data) => data.criteriaScores !== undefined || data.totalScore !== undefined,
-  { message: "Provide at least criteriaScores or totalScore" }
+  { message: "Provide at least one of criteriaScores or totalScore" }
 );
 
-export type UpdateEvaluationInput = z.infer<typeof UpdateEvaluationSchema>;
-
-// Route params
-export const SubmissionIdParamSchema = z.object({
-  submissionId: mongoId,
-});
-
-export const ExamIdParamSchema = z.object({
-  examId: mongoId,
-});
-
-export type SubmissionIdParam = z.infer<typeof SubmissionIdParamSchema>;
-export type ExamIdParam = z.infer<typeof ExamIdParamSchema>;
+export type updateEvaluationDto = z.infer<typeof UpdateEvaluationSchema>;

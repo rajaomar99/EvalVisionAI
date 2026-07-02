@@ -52,11 +52,11 @@ export default function ExamDetailPage() {
   }
 
   function handleDownloadRubric() {
-    if (!exam?.rubricFile) {
+    if (!exam?.rubricFileUrl) {
       alert("No rubric file is attached to this exam.");
       return;
     }
-    window.open(exam.rubricFile, "_blank", "noopener,noreferrer");
+    window.open(exam.rubricFileUrl, "_blank", "noopener,noreferrer");
   }
 
   if (loading) return <LoadingSpinner className="py-20" />;
@@ -156,7 +156,7 @@ export default function ExamDetailPage() {
       </div>
 
       {/* Rubric */}
-      {exam.rubricFile && (
+      {exam.rubricFileUrl && (
         <div className="rounded-sm border border-zinc-200 bg-white p-6 ">
           <h3 className="mb-2 text-sm font-semibold uppercase tracking-wide text-zinc-500">Rubric Document</h3>
           <button

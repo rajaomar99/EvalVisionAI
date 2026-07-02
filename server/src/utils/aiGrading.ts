@@ -7,17 +7,17 @@ const AI_API_KEY = env.AI_API_KEY;
 // Types
 interface Question {
   questionText: string;
-  maxMarks: number;
-  type?: string;
+  maxMarks:     number;
+  type:         "subjective" | "mcq";
 }
 
 interface GradeWithAIOptions {
-  fileUrl: string;
-  mimeType?: string;
-  rubricFileUrl?: string;
-  questions: Question[];
+  fileUrl:        string;
+  mimeType?:      string;
+  rubricFileUrl:  string;
+  questions:      Question[];
   assignmentTitle?: string;
-  courseName?: string;
+  courseName?:    string;
 }
 
 export async function gradeWithAI(opts: GradeWithAIOptions): Promise<unknown> {
@@ -30,16 +30,12 @@ export async function gradeWithAI(opts: GradeWithAIOptions): Promise<unknown> {
     courseName      = "",
   } = opts;
 
-  if (!fileUrl) {
-    throw new Error("fileUrl is required for AI grading - no text-based grading supported");
-  }
-
   const { data } = await axios.post(
     `${AI_BASE}/ai/grade/url`,
     {
       fileUrl,
       mimeType: mimeType || "application/octet-stream",
-      rubricFileUrl: rubricFileUrl || "",
+      rubricFileUrl,
       questions,
       assignmentTitle,
       courseName,

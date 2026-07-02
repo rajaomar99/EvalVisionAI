@@ -4,29 +4,14 @@ import Submission from "../models/Submission.js";
 import Evaluation from "../models/Evaluation.js";
 import { utapi } from "../utils/uploadthingApi.js";
 import { handleError } from "../utils/handleError.js";
-import { ValidationError, ForbiddenError, NotFoundError } from "../utils/errors.js";
+import { ForbiddenError, NotFoundError } from "../utils/errors.js";
+import { createExamDto, examIdParamDto, updateExamDto } from "../schemas/exam.schema.js";
 
 // Controllers
 
 export const createExam = async (req: Request, res: Response) => {
   try {
-    let { title, subject, questions, rubricFileUrl, rubricFileKey } = req.body as Record<string, any>;
-
-    if (typeof questions === "string") {
-      try {
-        questions = JSON.parse(questions);
-      } catch {
-        throw new ValidationError("Invalid JSON format for questions");
-      }
-    }
-
-    if (!title || !questions || !questions.length) {
-      throw new ValidationError("title and at least one question are required");
-    }
-
-    if (!rubricFileUrl) {
-      throw new ValidationError("Rubric file is required - upload it first via UploadThing");
-    }
+    const { title, subject, questions, rubricFileUrl, rubricFileKey }: createExamDto = req.body;
 
     if (!req.user) throw new ForbiddenError("Not authenticated");
 
@@ -34,9 +19,9 @@ export const createExam = async (req: Request, res: Response) => {
       title,
       subject,
       questions,
-      teacherId:    req.user.id,
-      rubricFile:   rubricFileUrl,
-      rubricFileKey: rubricFileKey || "",
+      teacherId: req.user.id,
+      rubricFileUrl,
+      rubricFileKey,
     });
 
     return res.status(201).json({ exam });
@@ -48,6 +33,7 @@ export const createExam = async (req: Request, res: Response) => {
 export const listExams = async (req: Request, res: Response) => {
   try {
     if (!req.user) throw new ForbiddenError("Not authenticated");
+
     const filter = { teacherId: req.user.id };
     const exams = await Exam.find(filter).sort({ createdAt: -1 });
 
@@ -66,7 +52,9 @@ export const listExams = async (req: Request, res: Response) => {
 export const getExam = async (req: Request, res: Response) => {
   try {
     if (!req.user) throw new ForbiddenError("Not authenticated");
-    const exam = await Exam.findById(req.params.id);
+
+    const { examId } = req.params as examIdParamDto;
+    const exam = await Exam.findById(examId);
     if (!exam) throw new NotFoundError("Exam");
 
     if (exam.teacherId.toString() !== req.user.id) {
@@ -82,17 +70,11 @@ export const getExam = async (req: Request, res: Response) => {
 export const updateExam = async (req: Request, res: Response) => {
   try {
     if (!req.user) throw new ForbiddenError("Not authenticated");
-    let { title, subject, questions, rubricFileUrl, rubricFileKey } = req.body as Record<string, any>;
 
-    if (typeof questions === "string") {
-      try {
-        questions = JSON.parse(questions);
-      } catch {
-        throw new ValidationError("Invalid JSON format for questions");
-      }
-    }
+    const { title, subject, questions, rubricFileUrl, rubricFileKey }: updateExamDto = req.body;
+    const { examId } = req.params as examIdParamDto;
 
-    const exam = await Exam.findById(req.params.id);
+    const exam = await Exam.findById(examId);
     if (!exam) throw new NotFoundError("Exam");
 
     if (exam.teacherId.toString() !== req.user.id) {
@@ -111,7 +93,7 @@ export const updateExam = async (req: Request, res: Response) => {
           console.error("[UT] Failed to delete old rubric:", e.message)
         );
       }
-      updates.rubricFile    = rubricFileUrl;
+      updates.rubricFileUrl = rubricFileUrl;
       updates.rubricFileKey = rubricFileKey || "";
     }
 
@@ -127,7 +109,9 @@ export const updateExam = async (req: Request, res: Response) => {
 export const deleteExam = async (req: Request, res: Response) => {
   try {
     if (!req.user) throw new ForbiddenError("Not authenticated");
-    const exam = await Exam.findById(req.params.id);
+
+    const { examId } = req.params as examIdParamDto;
+    const exam = await Exam.findById(examId);
     if (!exam) throw new NotFoundError("Exam");
 
     if (exam.teacherId.toString() !== req.user.id) {
@@ -152,7 +136,7 @@ export const deleteExam = async (req: Request, res: Response) => {
 
     await Submission.deleteMany({ examId: exam._id });
 
-    await Exam.findByIdAndDelete(req.params.id);
+    await Exam.findByIdAndDelete(examId);
     
     return res.status(200).json({ message: "Exam deleted" });
   } catch (err) {
@@ -163,7 +147,9 @@ export const deleteExam = async (req: Request, res: Response) => {
 export const getExamAnalytics = async (req: Request, res: Response) => {
   try {
     if (!req.user) throw new ForbiddenError("Not authenticated");
-    const exam = await Exam.findById(req.params.id);
+
+    const { examId } = req.params as examIdParamDto;
+    const exam = await Exam.findById(examId);
     if (!exam) throw new NotFoundError("Exam");
 
     if (exam.teacherId.toString() !== req.user.id) {
@@ -213,7 +199,7 @@ export const getExamAnalytics = async (req: Request, res: Response) => {
     const evaluations = await Evaluation.find({ examId: exam._id });
 
     const questionPerformance = exam.questions.map((q, idx) => {
-      const criterionId = `q${idx}`;
+      const criterionId = `q${idx + 1}`;
       let totalQuestionScore = 0;
       let count = 0;
 

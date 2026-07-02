@@ -1,5 +1,5 @@
 import bcrypt from "bcryptjs";
-import mongoose, { Schema, Model, HydratedDocument } from "mongoose";
+import mongoose, { Schema, Model } from "mongoose";
 
 // Interfaces
 export interface IUser {
@@ -23,7 +23,6 @@ export interface IUserMethods {
   toSafeObject(): SafeUser;
 }
 
-export type UserDocument = HydratedDocument<IUser, IUserMethods>;
 type UserModel = Model<IUser, Record<string, never>, IUserMethods>;
 
 // Schema

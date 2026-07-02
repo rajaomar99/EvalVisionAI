@@ -1,4 +1,4 @@
-import mongoose, { Schema, HydratedDocument } from "mongoose";
+import mongoose, { Schema } from "mongoose";
 
 // Interfaces
 export interface ICriterionScore {
@@ -17,8 +17,6 @@ export interface IEvaluation {
   createdAt:       Date;
   updatedAt:       Date;
 }
-
-export type EvaluationDocument = HydratedDocument<IEvaluation>;
 
 // Schema
 const criterionScoreSchema = new Schema<ICriterionScore>(
@@ -41,8 +39,6 @@ const evaluationSchema = new Schema<IEvaluation>(
   },
   { timestamps: true }
 );
-
-evaluationSchema.index({ submissionId: 1 }, { unique: true });
 
 const Evaluation = mongoose.model<IEvaluation>("Evaluation", evaluationSchema);
 export default Evaluation;

@@ -5,13 +5,15 @@ import Evaluation from "../models/Evaluation.js";
 import { gradeWithAI } from "../utils/aiGrading.js";
 import { handleError } from "../utils/handleError.js";
 import { ForbiddenError, NotFoundError, ValidationError } from "../utils/errors.js";
+import { submissionIdParamDto } from "../schemas/submission.schema.js";
 
 // Controllers
 
 export const gradeSubmission = async (req: Request, res: Response) => {
   try {
     if (!req.user) throw new ForbiddenError("Not authenticated");
-    const { submissionId } = req.params;
+
+    const { submissionId } = req.params as submissionIdParamDto;
 
     const submission = await Submission.findById(submissionId);
     if (!submission) throw new NotFoundError("Submission");
@@ -33,7 +35,7 @@ export const gradeSubmission = async (req: Request, res: Response) => {
       aiResponse = await gradeWithAI({
         fileUrl:       submission.fileUrl,
         mimeType:      submission.mimeType,
-        rubricFileUrl: exam.rubricFile,
+        rubricFileUrl: exam.rubricFileUrl,
         questions:     exam.questions,
         assignmentTitle: exam.title,
         courseName:    exam.subject,
@@ -70,7 +72,7 @@ export const gradeSubmission = async (req: Request, res: Response) => {
 
     const updatedAnswers = evalData.criteriaScores?.length
       ? exam.questions.map((q, idx) => {
-          const criterionId = `q${idx}`;
+          const criterionId = `q${idx + 1}`;
           const match = evalData.criteriaScores.find((cs: any) => cs.criterionId === criterionId);
           return {
             questionIndex: idx,

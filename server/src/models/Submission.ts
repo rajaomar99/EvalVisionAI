@@ -1,4 +1,4 @@
-import mongoose, { Schema, HydratedDocument } from "mongoose";
+import mongoose, { Schema } from "mongoose";
 
 // Interfaces
 export interface IAnswer {
@@ -26,8 +26,6 @@ export interface ISubmission {
   updatedAt:        Date;
 }
 
-export type SubmissionDocument = HydratedDocument<ISubmission>;
-
 // Schema
 const answerSchema = new Schema<IAnswer>(
   {
@@ -48,8 +46,8 @@ const submissionSchema = new Schema<ISubmission>(
     answers:          { type: [answerSchema], default: [] },
     totalAIScore:     { type: Number, default: null },
     totalFinalScore:  { type: Number, default: null },
-    fileUrl:          { type: String, default: "" },
-    utKey:            { type: String, default: "" },
+    fileUrl:          { type: String, required: [true, "File URL is required"] },
+    utKey:            { type: String, required: [true, "UploadThing Key is required"] },
     originalFileName: { type: String, default: "" },
     mimeType:         { type: String, default: "" },
     uploadDate:       { type: Date,   default: null },

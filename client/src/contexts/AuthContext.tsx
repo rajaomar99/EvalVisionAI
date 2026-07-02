@@ -19,10 +19,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    getMe()
-      .then(({ user: u }) => setUser(u))
-      .catch(() => setUser(null))
-      .finally(() => setLoading(false));
+    async function checkSession() {
+      try {
+        const { user: u } = await getMe();
+        setUser(u);
+      } catch {
+        setUser(null);
+      } finally {
+        setLoading(false);
+      }
+    }
+    checkSession();
   }, []);
 
   function saveAuth({ user: u }: { user: User }) {

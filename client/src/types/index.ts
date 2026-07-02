@@ -23,7 +23,7 @@ export interface Exam {
   teacherId:     string;
   totalMarks:    number;
   questions:     Question[];
-  rubricFile:    string;
+  rubricFileUrl: string;
   rubricFileKey: string;
   createdAt:     string;
   updatedAt:     string;
@@ -64,7 +64,6 @@ export interface CriterionScore {
   score:       number;
   feedback:    string;
 }
-
 
 export interface Evaluation {
   id:              string;
@@ -126,47 +125,16 @@ export interface ConfirmSubmissionResponse {
 }
 
 // Service input types
+import { z } from "zod";
+import { LoginSchema, RegisterSchema } from "../schemas/auth.schema";
+import { CreateExamSchema, UpdateExamSchema, QuestionSchema } from "../schemas/exam.schema";
+import { ConfirmSubmissionSchema } from "../schemas/submission.schema";
+import { UpdateEvaluationSchema } from "../schemas/evaluation.schema";
 
-export interface LoginPayload    { email: string; password: string }
-export interface RegisterPayload { name: string; email: string; password: string }
-
-export interface QuestionInput {
-  questionText: string;
-  maxMarks:     number;
-  type?:        "subjective" | "mcq";
-}
-
-export interface CreateExamPayload {
-  title:         string;
-  subject?:      string;
-  questions:     QuestionInput[];
-  rubricFileUrl: string;
-  rubricFileKey?: string;
-}
-
-export interface UpdateExamPayload {
-  title?:         string;
-  subject?:       string;
-  questions?:     QuestionInput[];
-  rubricFileUrl?: string;
-  rubricFileKey?: string;
-}
-
-export interface ConfirmSubmissionPayload {
-  studentName:       string;
-  fileUrl:           string;
-  utKey?:            string;
-  originalFileName?: string;
-  mimeType?:         string;
-}
-
-export interface UpdateEvaluationPayload {
-  criteriaScores?:  CriterionScore[];
-  overallFeedback?: string;
-  totalScore?:      number;
-}
-
-// API error shape
-export interface ApiError {
-  message: string;
-}
+export type LoginPayload = z.infer<typeof LoginSchema>;
+export type RegisterPayload = Omit<z.infer<typeof RegisterSchema>, "confirmPassword">;
+export type QuestionInput = z.infer<typeof QuestionSchema>;
+export type CreateExamPayload = z.infer<typeof CreateExamSchema>;
+export type UpdateExamPayload = z.infer<typeof UpdateExamSchema>;
+export type ConfirmSubmissionPayload = z.infer<typeof ConfirmSubmissionSchema>;
+export type UpdateEvaluationPayload = z.infer<typeof UpdateEvaluationSchema>;
