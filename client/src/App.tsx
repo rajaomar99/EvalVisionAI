@@ -10,13 +10,14 @@ import CreateExamPage from "./pages/teacher/CreateExamPage";
 import ExamDetailPage from "./pages/teacher/ExamDetailPage";
 import UploadSubmissionPage from "./pages/teacher/UploadSubmissionPage";
 import AssignmentSubmissionsPage from "./pages/teacher/AssignmentSubmissionsPage";
+import GuestRoute from "./components/GuestRoute";
 
 function App() {
   return (
     <Routes>
       {/* Public auth pages (no layout chrome) */}
-      <Route path="/login" element={<LoginPage />} />
-      <Route path="/register" element={<RegisterPage />} />
+      <Route path="/login" element={<GuestRoute><LoginPage /></GuestRoute>} />
+      <Route path="/register" element={<GuestRoute><RegisterPage /></GuestRoute>} />
 
       {/* App shell */}
       <Route element={<AppLayout />}>

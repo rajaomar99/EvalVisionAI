@@ -7,7 +7,7 @@ const navLinks = [
 ];
 
 function AppLayout() {
-  const { user, isAuthenticated, logout } = useAuth();
+  const { user, isAuthenticated, loading, logout } = useAuth();
   const navigate = useNavigate();
 
   function handleLogout() {
@@ -31,7 +31,7 @@ function AppLayout() {
           </Link>
 
           {/* Navigation links */}
-          {isAuthenticated && (
+          {!loading && isAuthenticated && (
             <nav className="hidden items-center gap-1 sm:flex">
               {navLinks.map((link) => (
                 <NavLink
@@ -53,7 +53,9 @@ function AppLayout() {
 
           {/* Right side */}
           <div className="flex items-center gap-3">
-            {isAuthenticated ? (
+            {loading ? (
+              <div className="h-9 w-24 animate-pulse rounded-sm bg-zinc-100" />
+            ) : isAuthenticated ? (
               <>
                 <span className="hidden text-sm font-medium text-zinc-500 sm:inline">
                   {user?.name}
