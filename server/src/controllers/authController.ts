@@ -1,5 +1,6 @@
-import { Request, Response } from "express";
+import { Request, Response, NextFunction } from "express";
 import User from "../models/User.js";
+import passport from "../config/passport.js";
 import { handleError } from "../utils/handleError.js";
 import { ConflictError } from "../utils/errors.js";
 import { registerDto } from "../schemas/auth.schema.js";
@@ -26,8 +27,17 @@ export const register = async (req: Request, res: Response) => {
 };
 
 // login
-export const login = (req: Request, res: Response) => {
-  return res.status(200).json({ user: req.user?.toSafeObject() });
+export const login = (req: Request, res: Response, next: NextFunction) => {
+  passport.authenticate("local", (err: any, user: any, info: any) => {
+    if (err) return next(err);
+    if (!user) {
+      return res.status(401).json({ message: info?.message || "Invalid credentials" });
+    }
+    req.logIn(user, (loginErr) => {
+      if (loginErr) return next(loginErr);
+      return res.status(200).json({ user: req.user?.toSafeObject() });
+    });
+  })(req, res, next);
 };
 
 // logout

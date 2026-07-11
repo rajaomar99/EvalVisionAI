@@ -1,6 +1,7 @@
 import cors from "cors";
 import express from "express";
 import helmet from "helmet";
+import { globalLimiter } from "./middleware/rateLimiter.js";
 import morgan from "morgan";
 import session from "express-session";
 import MongoStore from "connect-mongo";
@@ -23,6 +24,7 @@ app.set("trust proxy", 1);
 // Core Middleware
 app.use(helmet());
 app.use(cors({ origin: env.CLIENT_ORIGIN, credentials: true }));
+app.use(globalLimiter);
 app.use(morgan("dev"));
 app.use(express.json({ limit: "2mb" }));
 

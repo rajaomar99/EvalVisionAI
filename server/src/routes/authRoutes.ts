@@ -4,24 +4,15 @@ import { authenticate } from "../middleware/authenticate.js";
 import { register, login, logout, getMe } from "../controllers/authController.js";
 import { env } from "../config/env.js";
 import { validate } from "../middleware/validate.js";
+import { authLimiter } from "../middleware/rateLimiter.js";
 import { LoginSchema, RegisterSchema } from "../schemas/auth.schema.js";
 import { Request, Response, NextFunction } from "express";
 
 const router = Router();
 
-router.post("/register", validate(RegisterSchema), register);
+router.post("/register", authLimiter, validate(RegisterSchema), register);
 
-router.post("/login", validate(LoginSchema),
-  passport.authenticate("local", {
-    session: true,
-    failWithError: true,   // surfaces errors as proper Express errors
-  }),
-  login
-);
-
-router.use("/login", (err: any, req: Request, res: Response, next: NextFunction) => {
-  res.status(401).json({ message: err.message || "Invalid credentials" });
-});
+router.post("/login", authLimiter, validate(LoginSchema), login);
 
 router.post("/logout", authenticate, logout);
 router.get("/me", authenticate, getMe);
