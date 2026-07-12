@@ -18,6 +18,7 @@ export default function ExamDetailPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [showDelete, setShowDelete] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   useEffect(() => {
     async function load() {
@@ -41,6 +42,7 @@ export default function ExamDetailPage() {
   }, [examId]);
 
   async function handleDelete() {
+    setIsDeleting(true);
     try {
       await deleteExam(examId!);
       navigate("/exams");
@@ -48,6 +50,7 @@ export default function ExamDetailPage() {
       const e = err as { response?: { data?: { message?: string } } };
       setError(e.response?.data?.message ?? "Delete failed");
       setShowDelete(false);
+      setIsDeleting(false);
     }
   }
 
@@ -259,8 +262,9 @@ export default function ExamDetailPage() {
         open={showDelete}
         title="Delete Exam"
         message="Are you sure? This will permanently delete this exam."
+        confirmText={isDeleting ? "Deleting..." : "Delete"}
         onConfirm={handleDelete}
-        onCancel={() => setShowDelete(false)}
+        onCancel={() => !isDeleting && setShowDelete(false)}
       />
     </div>
   );

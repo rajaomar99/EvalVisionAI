@@ -3,19 +3,17 @@ import { z } from "zod";
 // Single Question
 export const QuestionSchema = z.object({
   questionText: z.string().min(1, "Question text is required"),
-  maxMarks:     z.coerce
-                  .number({ error: "Max marks must be a number" })
-                  .int("Max marks must be a whole number")
+  maxMarks:     z.number("Max marks is required")
                   .min(1, "Max marks must be at least 1"),
-  type:         z.enum(["subjective", "mcq"]).default("subjective"),
+  type:         z.enum(["subjective", "mcq"]),
 });
 
 // Create Exam
 export const CreateExamSchema = z.object({
   title:         z.string().min(1, "Title is required").trim(),
-  subject:       z.string().trim().optional().default(""),
+  subject:       z.string().trim(),
   questions:     z.array(QuestionSchema).min(1, "Add at least one question"),
-  rubricFileUrl: z.url("rubricFileUrl must be a valid URL"),
+  rubricFileUrl: z.url("Please upload a rubric file first"),
   rubricFileKey: z.string().min(1, "rubricFileKey is required"),
 });
 

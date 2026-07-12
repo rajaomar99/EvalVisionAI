@@ -1,44 +1,59 @@
 import React, { useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { toast } from "sonner";
+import { z } from "zod";
 import { confirmSubmission } from "../../services/submissionApi";
 import { useUploadThing } from "../../lib/uploadthing";
 import LoadingSpinner from "../../components/common/LoadingSpinner";
+import { ConfirmSubmissionSchema } from "../../schemas/submission.schema";
 
-// Uploaded file metadata returned by UploadThing's onClientUploadComplete callback
-interface UploadedFile {
-  url:  string;
-  key:  string;
-  name: string;
-  type: string;
-}
+type ConfirmSubmissionValues = z.infer<typeof ConfirmSubmissionSchema>;
 
 export default function UploadSubmissionPage() {
   const { examId } = useParams<{ examId: string }>();
   const navigate   = useNavigate();
 
-  const [studentName, setStudentName] = useState("");
+  // External state for upload progress (outside RHF)
   const [file, setFile] = useState<File | null>(null);
-  const [uploadedFile, setUploadedFile] = useState<UploadedFile | null>(null);
   const [uploading, setUploading] = useState(false);
-  const [confirming, setConfirming] = useState(false);
-  const [error, setError] = useState("");
+
+  const {
+    register,
+    handleSubmit,
+    setValue,
+    watch,
+    formState: { errors, isSubmitting },
+  } = useForm<ConfirmSubmissionValues>({
+    resolver: zodResolver(ConfirmSubmissionSchema),
+    mode: "onChange",
+    defaultValues: {
+      studentName: "",
+      fileUrl: "",
+      utKey: "",
+      originalFileName: "",
+      mimeType: "",
+    },
+  });
+
+  // Watch the fileUrl to know if upload is complete and show the UI state
+  const fileUrl = watch("fileUrl");
+  const originalFileName = watch("originalFileName");
 
   // UploadThing hook
   const { startUpload } = useUploadThing("submissionUploader", {
     onClientUploadComplete: (res) => {
       if (res?.[0]) {
-        setUploadedFile({
-          url:  res[0].ufsUrl,
-          key:  res[0].key,
-          name: res[0].name,
-          type: file?.type ?? "",
-        });
-        setError("");
+        setValue("fileUrl", res[0].ufsUrl, { shouldValidate: true });
+        setValue("utKey", res[0].key);
+        setValue("originalFileName", res[0].name || file?.name || "");
+        setValue("mimeType", file?.type || "");
       }
       setUploading(false);
     },
     onUploadError: (err) => {
-      setError(`Upload failed: ${err.message}`);
+      toast.error(`Upload failed: ${err.message}`);
       setUploading(false);
     },
   });
@@ -48,49 +63,33 @@ export default function UploadSubmissionPage() {
     const selected = e.target.files?.[0];
     if (!selected) return;
     setFile(selected);
-    setUploadedFile(null);
-    setError("");
+    
+    // Clear RHF state for file
+    setValue("fileUrl", "", { shouldValidate: false });
+    setValue("utKey", "");
+    setValue("originalFileName", "");
+    setValue("mimeType", "");
+    
     setUploading(true);
     await startUpload([selected]);
   }
 
   // Final submission confirm
-  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
-    e.preventDefault();
-
-    if (!uploadedFile) {
-      setError("Please select and wait for a file to finish uploading.");
-      return;
-    }
+  async function onSubmit(data: ConfirmSubmissionValues) {
     if (uploading) {
-      setError("Please wait for the file to finish uploading.");
+      toast.error("Please wait for the file to finish uploading.");
       return;
     }
 
     try {
-      setError("");
-      setConfirming(true);
-
-      await confirmSubmission(examId!, {
-        studentName,
-        fileUrl:          uploadedFile.url,
-        utKey:            uploadedFile.key,
-        originalFileName: uploadedFile.name || file?.name || "",
-        mimeType:         uploadedFile.type || file?.type || "",
-      });
-
+      await confirmSubmission(examId!, data);
+      toast.success("Submission uploaded successfully!");
       navigate(`/exams/${examId}/submissions`);
     } catch (err: unknown) {
       const e = err as { response?: { data?: { message?: string } } };
-      setError(
-        e.response?.data?.message ?? "Failed to confirm submission. Please try again."
-      );
-    } finally {
-      setConfirming(false);
+      toast.error(e.response?.data?.message ?? "Failed to confirm submission. Please try again.");
     }
   }
-
-  const isSubmitting = uploading || confirming;
 
   return (
     <div className="mx-auto max-w-2xl space-y-6">
@@ -111,15 +110,10 @@ export default function UploadSubmissionPage() {
         </p>
       </div>
 
-      {error && (
-        <div className="rounded-sm border border-zinc-200 bg-zinc-50 px-4 py-3 text-sm text-zinc-800">
-          {error}
-        </div>
-      )}
-
       <form
-        onSubmit={handleSubmit}
-        className="rounded-sm border border-zinc-200 bg-white p-6  space-y-5"
+        onSubmit={handleSubmit(onSubmit)}
+        className="rounded-sm border border-zinc-200 bg-white p-6 space-y-5"
+        noValidate
       >
         {/* Student name */}
         <div>
@@ -128,12 +122,13 @@ export default function UploadSubmissionPage() {
           </label>
           <input
             type="text"
-            required
-            value={studentName}
-            onChange={(e: React.ChangeEvent<HTMLInputElement>) => setStudentName(e.target.value)}
+            {...register("studentName")}
             className="w-full rounded-sm border border-zinc-300 px-3 py-2.5 text-sm placeholder:text-zinc-400 focus:border-zinc-900 focus:ring-2 focus:ring-zinc-900/20 outline-none transition"
             placeholder="John Doe"
           />
+          {errors.studentName && (
+            <p className="mt-1 text-xs text-red-500">{errors.studentName.message}</p>
+          )}
         </div>
 
         {/* File drop zone */}
@@ -145,7 +140,7 @@ export default function UploadSubmissionPage() {
             <label
               htmlFor="file-upload"
               className={`flex cursor-pointer flex-col items-center justify-center rounded-sm border-2 border-dashed px-6 py-10 transition ${
-                uploadedFile
+                fileUrl
                   ? "border-zinc-400 bg-zinc-50/40"
                   : uploading
                   ? "border-zinc-300 bg-zinc-100/30"
@@ -153,7 +148,7 @@ export default function UploadSubmissionPage() {
               }`}
             >
               <svg
-                className={`mb-3 h-10 w-10 ${uploadedFile ? "text-zinc-500" : uploading ? "text-zinc-500" : "text-zinc-400"}`}
+                className={`mb-3 h-10 w-10 ${fileUrl ? "text-zinc-500" : uploading ? "text-zinc-500" : "text-zinc-400"}`}
                 fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}
               >
                 <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5" />
@@ -165,10 +160,10 @@ export default function UploadSubmissionPage() {
                   <p className="text-sm font-medium text-zinc-900">Uploading…</p>
                   <p className="text-xs text-zinc-400">{file?.name}</p>
                 </div>
-              ) : uploadedFile ? (
+              ) : fileUrl ? (
                 <div className="text-center">
                   <p className="text-sm font-semibold text-zinc-800">Upload complete</p>
-                  <p className="mt-1 text-sm text-zinc-600">{uploadedFile.name}</p>
+                  <p className="mt-1 text-sm text-zinc-600">{originalFileName}</p>
                   <p className="mt-0.5 text-xs text-zinc-400">Click to replace</p>
                 </div>
               ) : (
@@ -187,6 +182,10 @@ export default function UploadSubmissionPage() {
                 disabled={uploading}
               />
             </label>
+            {/* Inline file validation error */}
+            {errors.fileUrl && !uploading && !fileUrl && (
+              <p className="mt-1 text-xs text-red-500">{errors.fileUrl.message}</p>
+            )}
           </div>
         </div>
 
@@ -201,10 +200,10 @@ export default function UploadSubmissionPage() {
           </button>
           <button
             type="submit"
-            disabled={isSubmitting || !uploadedFile}
+            disabled={isSubmitting || uploading}
             className="inline-flex items-center gap-2 rounded-sm bg-zinc-900 px-6 py-2.5 text-sm font-semibold text-white transition hover:bg-zinc-800 disabled:opacity-50"
           >
-            {confirming ? (
+            {isSubmitting ? (
               <><LoadingSpinner size="sm" /> Saving…</>
             ) : uploading ? (
               <><LoadingSpinner size="sm" /> Uploading…</>

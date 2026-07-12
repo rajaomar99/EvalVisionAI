@@ -1,7 +1,13 @@
-import React, { useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { toast } from "sonner";
+import { z } from "zod";
 import { useAuth } from "../../contexts/AuthContext";
 import { loginUser } from "../../services/authApi";
+import { LoginSchema } from "../../schemas/auth.schema";
+
+type LoginFormValues = z.infer<typeof LoginSchema>;
 
 // Google's brand icon (SVG)
 function GoogleIcon() {
@@ -15,45 +21,37 @@ function GoogleIcon() {
   );
 }
 
-const GOOGLE_AUTH_URL = (import.meta.env.VITE_API_BASE_URL || 
+const GOOGLE_AUTH_URL = (import.meta.env.VITE_API_BASE_URL ||
 "http://localhost:5000/api").replace(/\/api$/, "") + "/api/auth/google";
 
 export default function LoginPage() {
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [error, setError] = useState("");
-  const [loading, setLoading] = useState(false);
   const { saveAuth } = useAuth();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
+
+  const {
+    register,
+    handleSubmit,
+    formState: { errors, isSubmitting },
+  } = useForm<LoginFormValues>({
+    resolver: zodResolver(LoginSchema),
+    mode: "onChange",
+  });
 
   // Show error if Google OAuth failed (server redirects back with ?error=google)
   const oauthError = searchParams.get("error") === "google"
     ? "Google sign-in failed. Please try again."
     : "";
 
-  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
-    e.preventDefault();
-
-    if (!email || !password) { setError("Please fill in all fields."); return; }
-
-    // Client-side email format check (server validates too)
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-      setError("Please enter a valid email address.");
-      return;
-    }
-
+  async function onSubmit(data: LoginFormValues) {
     try {
-      setError("");
-      setLoading(true);
-      const data = await loginUser({ email, password });
-      saveAuth(data);
+      const result = await loginUser(data);
+      saveAuth(result);
+      toast.success("Logged in successfully!");
       navigate("/dashboard");
     } catch (err: unknown) {
       const e = err as { response?: { data?: { message?: string } } };
-      setError(e.response?.data?.message ?? "Failed to log in");
-    } finally {
-      setLoading(false);
+      toast.error(e.response?.data?.message ?? "Failed to log in");
     }
   }
 
@@ -88,7 +86,7 @@ export default function LoginPage() {
         </div>
 
         {/* Card */}
-        <div className="rounded-sm border border-zinc-200 bg-white p-6 ">
+        <div className="rounded-sm border border-zinc-200 bg-white p-6">
           {oauthError && (
             <div className="mb-4 rounded-sm border border-zinc-200 bg-zinc-50 px-4 py-3 text-sm text-zinc-800">{oauthError}</div>
           )}
@@ -97,7 +95,7 @@ export default function LoginPage() {
             id="google-login-btn"
             type="button"
             onClick={handleGoogleLogin}
-            className="mb-5 flex w-full items-center justify-center rounded-sm border border-zinc-300 bg-white py-2.5 text-sm font-medium text-zinc-800  transition hover:bg-zinc-50 hover:border-zinc-400 focus:outline-none focus:ring-2 focus:ring-zinc-900/20"
+            className="mb-5 flex w-full items-center justify-center rounded-sm border border-zinc-300 bg-white py-2.5 text-sm font-medium text-zinc-800 transition hover:bg-zinc-50 hover:border-zinc-400 focus:outline-none focus:ring-2 focus:ring-zinc-900/20"
           >
             <GoogleIcon />
             Continue with Google
@@ -112,33 +110,42 @@ export default function LoginPage() {
             </div>
           </div>
 
-          <form className="space-y-5" onSubmit={handleSubmit} noValidate>
-            {error && (
-              <div className="rounded-sm border border-zinc-200 bg-zinc-50 px-4 py-3 text-sm text-zinc-800">{error}</div>
-            )}
+          <form className="space-y-5" onSubmit={handleSubmit(onSubmit)} noValidate>
             <div>
               <label className="mb-1 block text-sm font-medium text-zinc-800">Email</label>
               <input
-                id="login-email" type="email" required value={email}
-                onChange={(e: React.ChangeEvent<HTMLInputElement>) => { setEmail(e.target.value); setError(""); }}
+                id="login-email"
+                type="email"
+                {...register("email")}
                 className="w-full rounded-sm border border-zinc-300 px-3 py-2.5 text-sm placeholder:text-zinc-400 focus:border-zinc-900 focus:ring-2 focus:ring-zinc-900/20 outline-none transition"
                 placeholder="teacher@school.edu"
               />
+              {errors.email && (
+                <p className="mt-1 text-xs text-red-500">{errors.email.message}</p>
+              )}
             </div>
+
             <div>
               <label className="mb-1 block text-sm font-medium text-zinc-800">Password</label>
               <input
-                id="login-password" type="password" required value={password}
-                onChange={(e: React.ChangeEvent<HTMLInputElement>) => { setPassword(e.target.value); setError(""); }}
+                id="login-password"
+                type="password"
+                {...register("password")}
                 className="w-full rounded-sm border border-zinc-300 px-3 py-2.5 text-sm placeholder:text-zinc-400 focus:border-zinc-900 focus:ring-2 focus:ring-zinc-900/20 outline-none transition"
                 placeholder="••••••••"
               />
+              {errors.password && (
+                <p className="mt-1 text-xs text-red-500">{errors.password.message}</p>
+              )}
             </div>
+
             <button
-              id="login-submit-btn" type="submit" disabled={loading}
+              id="login-submit-btn"
+              type="submit"
+              disabled={isSubmitting}
               className="w-full rounded-sm bg-zinc-900 py-2.5 text-sm font-semibold text-white transition hover:bg-zinc-800 disabled:opacity-50"
             >
-              {loading ? "Signing in…" : "Sign In"}
+              {isSubmitting ? "Signing in…" : "Sign In"}
             </button>
           </form>
         </div>

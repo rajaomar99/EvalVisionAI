@@ -12,6 +12,8 @@ export default function ExamsPage() {
   const [error, setError] = useState("");
   const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
 
+  const [isDeleting, setIsDeleting] = useState(false);
+
   async function fetchExams() {
     try {
       setLoading(true);
@@ -29,6 +31,7 @@ export default function ExamsPage() {
 
   async function handleDelete() {
     if (!deleteTarget) return;
+    setIsDeleting(true);
     try {
       await deleteExam(deleteTarget);
       setExams((prev) => prev.filter((e) => e.id !== deleteTarget));
@@ -37,6 +40,7 @@ export default function ExamsPage() {
       setError(e.response?.data?.message ?? "Delete failed");
     } finally {
       setDeleteTarget(null);
+      setIsDeleting(false);
     }
   }
 
@@ -126,8 +130,9 @@ export default function ExamsPage() {
         open={!!deleteTarget}
         title="Delete Exam"
         message="Are you sure? This will permanently delete this exam and cannot be undone."
+        confirmText={isDeleting ? "Deleting..." : "Delete"}
         onConfirm={handleDelete}
-        onCancel={() => setDeleteTarget(null)}
+        onCancel={() => !isDeleting && setDeleteTarget(null)}
       />
     </div>
   );

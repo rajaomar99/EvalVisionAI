@@ -1,7 +1,13 @@
-import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { toast } from "sonner";
+import { z } from "zod";
 import { useAuth } from "../../contexts/AuthContext";
 import { registerUser } from "../../services/authApi";
+import { RegisterSchema } from "../../schemas/auth.schema";
+
+type RegisterFormValues = z.infer<typeof RegisterSchema>;
 
 function GoogleIcon() {
   return (
@@ -14,46 +20,31 @@ function GoogleIcon() {
   );
 }
 
-const GOOGLE_AUTH_URL = (import.meta.env.VITE_API_BASE_URL || 
+const GOOGLE_AUTH_URL = (import.meta.env.VITE_API_BASE_URL ||
 "http://localhost:5000/api").replace(/\/api$/, "") + "/api/auth/google";
 
 export default function RegisterPage() {
-  const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
-  const [error, setError] = useState("");
-  const [loading, setLoading] = useState(false);
   const { saveAuth } = useAuth();
   const navigate = useNavigate();
 
-  async function handleSubmit(e: React.SubmitEvent<HTMLFormElement>) {
-    e.preventDefault();
+  const {
+    register,
+    handleSubmit,
+    formState: { errors, isSubmitting },
+  } = useForm<RegisterFormValues>({
+    resolver: zodResolver(RegisterSchema),
+    mode: "onChange",
+  });
 
-    if (!name || !email || !password || !confirmPassword) {
-      setError("Please fill in all fields."); return;
-    }
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-      setError("Please enter a valid email address."); return;
-    }
-    if (password.length < 8 || !/[A-Z]/.test(password) || !/[!@#$%^&*(),.?":{}|<>]/.test(password)) {
-      setError("Password must be at least 8 characters long, and include at least one uppercase letter and one symbol."); return;
-    }
-    if (password !== confirmPassword) {
-      setError("Passwords do not match."); return;
-    }
-
+  async function onSubmit(data: RegisterFormValues) {
     try {
-      setError("");
-      setLoading(true);
-      const data = await registerUser({ name, email, password });
-      saveAuth(data);
+      const result = await registerUser({ name: data.name, email: data.email, password: data.password });
+      saveAuth(result);
+      toast.success("Account created successfully!");
       navigate("/dashboard");
     } catch (err: unknown) {
       const e = err as { response?: { data?: { message?: string } } };
-      setError(e.response?.data?.message ?? "Failed to create account");
-    } finally {
-      setLoading(false);
+      toast.error(e.response?.data?.message ?? "Failed to create account");
     }
   }
 
@@ -84,10 +75,12 @@ export default function RegisterPage() {
           </p>
         </div>
 
-        <div className="rounded-sm border border-zinc-200 bg-white p-6 ">
+        <div className="rounded-sm border border-zinc-200 bg-white p-6">
           <button
-            id="google-register-btn" type="button" onClick={handleGoogleRegister}
-            className="mb-5 flex w-full items-center justify-center rounded-sm border border-zinc-300 bg-white py-2.5 text-sm font-medium text-zinc-800  transition hover:bg-zinc-50 hover:border-zinc-400 focus:outline-none focus:ring-2 focus:ring-zinc-900/20"
+            id="google-register-btn"
+            type="button"
+            onClick={handleGoogleRegister}
+            className="mb-5 flex w-full items-center justify-center rounded-sm border border-zinc-300 bg-white py-2.5 text-sm font-medium text-zinc-800 transition hover:bg-zinc-50 hover:border-zinc-400 focus:outline-none focus:ring-2 focus:ring-zinc-900/20"
           >
             <GoogleIcon /> Continue with Google
           </button>
@@ -101,34 +94,76 @@ export default function RegisterPage() {
             </div>
           </div>
 
-          <form className="space-y-4" onSubmit={handleSubmit} noValidate>
-            {error && (
-              <div className="rounded-sm border border-zinc-200 bg-zinc-50 px-4 py-3 text-sm text-zinc-800">{error}</div>
-            )}
-            {[
-              { id: "register-name",             label: "Full Name",        type: "text",     value: name,            setter: setName,            placeholder: "Jane Doe" },
-              { id: "register-email",            label: "Email",            type: "email",    value: email,           setter: setEmail,           placeholder: "teacher@school.edu" },
-              { id: "register-password",         label: "Password",         type: "password", value: password,        setter: setPassword,        placeholder: "••••••••" },
-              { id: "register-confirm-password", label: "Confirm Password", type: "password", value: confirmPassword, setter: setConfirmPassword, placeholder: "••••••••" },
-            ].map(({ id, label, type, value, setter, placeholder }) => (
-              <div key={id}>
-                <label className="mb-1 block text-sm font-medium text-zinc-800">{label}</label>
-                <input
-                  id={id} type={type} required value={value}
-                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => { setter(e.target.value); setError(""); }}
-                  className="w-full rounded-sm border border-zinc-300 px-3 py-2.5 text-sm placeholder:text-zinc-400 focus:border-zinc-900 focus:ring-2 focus:ring-zinc-900/20 outline-none transition"
-                  placeholder={placeholder}
-                />
-                {id === "register-password" && (
-                  <p className="mt-1 text-xs text-zinc-400">Min 8 characters, one uppercase, one symbol</p>
-                )}
-              </div>
-            ))}
+          <form className="space-y-4" onSubmit={handleSubmit(onSubmit)} noValidate>
+            {/* Full Name */}
+            <div>
+              <label className="mb-1 block text-sm font-medium text-zinc-800">Full Name</label>
+              <input
+                id="register-name"
+                type="text"
+                {...register("name")}
+                className="w-full rounded-sm border border-zinc-300 px-3 py-2.5 text-sm placeholder:text-zinc-400 focus:border-zinc-900 focus:ring-2 focus:ring-zinc-900/20 outline-none transition"
+                placeholder="Jane Doe"
+              />
+              {errors.name && (
+                <p className="mt-1 text-xs text-red-500">{errors.name.message}</p>
+              )}
+            </div>
+
+            {/* Email */}
+            <div>
+              <label className="mb-1 block text-sm font-medium text-zinc-800">Email</label>
+              <input
+                id="register-email"
+                type="email"
+                {...register("email")}
+                className="w-full rounded-sm border border-zinc-300 px-3 py-2.5 text-sm placeholder:text-zinc-400 focus:border-zinc-900 focus:ring-2 focus:ring-zinc-900/20 outline-none transition"
+                placeholder="teacher@school.edu"
+              />
+              {errors.email && (
+                <p className="mt-1 text-xs text-red-500">{errors.email.message}</p>
+              )}
+            </div>
+
+            {/* Password */}
+            <div>
+              <label className="mb-1 block text-sm font-medium text-zinc-800">Password</label>
+              <input
+                id="register-password"
+                type="password"
+                {...register("password")}
+                className="w-full rounded-sm border border-zinc-300 px-3 py-2.5 text-sm placeholder:text-zinc-400 focus:border-zinc-900 focus:ring-2 focus:ring-zinc-900/20 outline-none transition"
+                placeholder="••••••••"
+              />
+              {errors.password ? (
+                <p className="mt-1 text-xs text-red-500">{errors.password.message}</p>
+              ) : (
+                <p className="mt-1 text-xs text-zinc-400">Min 8 characters, one uppercase, one symbol</p>
+              )}
+            </div>
+
+            {/* Confirm Password */}
+            <div>
+              <label className="mb-1 block text-sm font-medium text-zinc-800">Confirm Password</label>
+              <input
+                id="register-confirm-password"
+                type="password"
+                {...register("confirmPassword")}
+                className="w-full rounded-sm border border-zinc-300 px-3 py-2.5 text-sm placeholder:text-zinc-400 focus:border-zinc-900 focus:ring-2 focus:ring-zinc-900/20 outline-none transition"
+                placeholder="••••••••"
+              />
+              {errors.confirmPassword && (
+                <p className="mt-1 text-xs text-red-500">{errors.confirmPassword.message}</p>
+              )}
+            </div>
+
             <button
-              id="register-submit-btn" type="submit" disabled={loading}
+              id="register-submit-btn"
+              type="submit"
+              disabled={isSubmitting}
               className="mt-2 w-full rounded-sm bg-zinc-900 py-2.5 text-sm font-semibold text-white transition hover:bg-zinc-800 disabled:opacity-50"
             >
-              {loading ? "Creating account…" : "Create Account"}
+              {isSubmitting ? "Creating account…" : "Create Account"}
             </button>
           </form>
         </div>

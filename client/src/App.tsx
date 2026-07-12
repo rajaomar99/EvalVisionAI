@@ -11,15 +11,18 @@ import ExamDetailPage from "./pages/teacher/ExamDetailPage";
 import UploadSubmissionPage from "./pages/teacher/UploadSubmissionPage";
 import AssignmentSubmissionsPage from "./pages/teacher/AssignmentSubmissionsPage";
 import GuestRoute from "./components/GuestRoute";
+import ScrollToTop from "./components/common/ScrollToTop";
 
 function App() {
   return (
-    <Routes>
-      {/* Public auth pages (no layout chrome) */}
-      <Route path="/login" element={<GuestRoute><LoginPage /></GuestRoute>} />
-      <Route path="/register" element={<GuestRoute><RegisterPage /></GuestRoute>} />
+    <>
+      <ScrollToTop />
+      <Routes>
+        {/* Public auth pages (no layout chrome) */}
+        <Route path="/login" element={<GuestRoute><LoginPage /></GuestRoute>} />
+        <Route path="/register" element={<GuestRoute><RegisterPage /></GuestRoute>} />
 
-      {/* App shell */}
+        {/* App shell */}
       <Route element={<AppLayout />}>
         {/* Public landing */}
         <Route path="/" element={<HomePage />} />
@@ -88,6 +91,7 @@ function App() {
         <Route path="*" element={<Navigate to="/" replace />} />
       </Route>
     </Routes>
+    </>
   );
 }
 

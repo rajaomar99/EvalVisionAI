@@ -1,5 +1,7 @@
+import { useState } from "react";
 import { Link, NavLink, Outlet, useNavigate } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
+import LoadingSpinner from "../components/common/LoadingSpinner";
 
 const navLinks = [
   { to: "/dashboard", label: "Dashboard" },
@@ -9,9 +11,11 @@ const navLinks = [
 function AppLayout() {
   const { user, isAuthenticated, loading, logout } = useAuth();
   const navigate = useNavigate();
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
 
-  function handleLogout() {
-    logout();
+  async function handleLogout() {
+    setIsLoggingOut(true);
+    await logout();
     navigate("/login");
   }
 
@@ -62,9 +66,10 @@ function AppLayout() {
                 </span>
                 <button
                   onClick={handleLogout}
-                  className="rounded-sm border border-zinc-200 px-3 py-1.5 text-sm font-medium text-zinc-600 transition hover:bg-zinc-50"
+                  disabled={isLoggingOut}
+                  className="inline-flex items-center justify-center rounded-sm border border-zinc-200 px-3 py-1.5 text-sm font-medium text-zinc-600 transition hover:bg-zinc-50 disabled:opacity-50 min-w-[70px]"
                 >
-                  Logout
+                  {isLoggingOut ? <LoadingSpinner size="sm" /> : "Logout"}
                 </button>
               </>
             ) : (
